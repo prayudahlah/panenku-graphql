@@ -32,6 +32,9 @@ Browser  --- GET /api/v1/graphql --->  GraphiQL (HTML+JS)
 - Saat ini yang dinonaktifkan di production adalah **GraphiQL (UI)**. **Query
   introspection sendiri belum dimatikan** di production. Bila ingin menutupnya,
   perlu plugin/konfigurasi tambahan (belum diimplementasikan).
+- Panel **Docs** berfungsi meski ada `complexity limit`, karena aturan complexity
+  mengecualikan tipe introspeksi (biaya 0). Tanpa pengecualian itu, query
+  introspeksi (~220) akan melebihi batas 100 dan Docs gagal.
 
 ## Cara membuktikan
 
