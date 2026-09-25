@@ -42,8 +42,12 @@ estimator     : simpleEstimator (1 per field)
 - `backend/src/index.ts` — `plugins: [ useAPQ(), useSecurityLimits({ maxDepth: 10, maxComplexity: 100 }) ]`.
 
 ## Catatan penting
-`graphql-depth-limit` **selalu mengabaikan field introspeksi** (nama berawalan `__`).
-Karena itu, alat utama untuk demo adalah **complexity limit**.
+- `graphql-depth-limit` **selalu mengabaikan field introspeksi** (nama berawalan `__`).
+- Aturan complexity juga **mengecualikan tipe introspeksi** (diberi biaya 0), supaya
+  panel **Docs GraphiQL** — yang mengambil schema lewat query introspeksi besar —
+  tidak ikut ditolak. Tanpa pengecualian ini, introspeksi berkompleksitas ~220 > 100
+  sehingga Docs gagal ("Error fetching schema").
+- Karena itu alat utama demo tetap **query non-introspeksi** (mis. aliasing produk).
 
 ## Cara membuktikan
 

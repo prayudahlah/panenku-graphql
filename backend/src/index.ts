@@ -65,6 +65,11 @@ const app = new Elysia()
             };
         }
 
+        if (code === 'NOT_FOUND') {
+            set.status = 404;
+            return { success: false, code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan' };
+        }
+
         const err: any = error;
         const errorMsg = typeof err === 'string' ? err : err?.message || '';
         const isTimeout =
@@ -83,6 +88,10 @@ const app = new Elysia()
         console.error(`[${code}]`, error);
         set.status = 503;
         return { success: false, message: 'Layanan tidak tersedia. Silakan coba lagi.' };
+    })
+    .get('/favicon.ico', ({ set }) => {
+        set.status = 204;
+        return '';
     })
     .use(cors({
         origin: process.env.CORS_ORIGIN || 'http://localhost:5173',

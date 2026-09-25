@@ -34,13 +34,13 @@ Arti: rata-rata 10 request/menit per IP, dengan toleransi burst 5.
 ## Penting
 Rate limit hanya berlaku lewat **nginx**. Bila mengakses backend langsung
 (`:3000`), tidak ada rate limit. Jadi demo harus melalui port nginx
-(default `:8080`).
+(port = `NGINX_PORT` dari `.env.local`, contoh `:80`).
 
 ## Cara membuktikan
 
 ### UI (utama)
 1. Pastikan stack berjalan, buka GraphiQL **lewat nginx**:
-   `http://localhost:8080/api/v1/graphql`
+   `http://localhost:<NGINX_PORT>/api/v1/graphql` (mis. `http://localhost:80/...`)
 2. Jalankan query ringan berikut berulang-ulang (mis. klik Run ~15 kali cepat):
 ```graphql
 { __typename }
@@ -51,8 +51,9 @@ Rate limit hanya berlaku lewat **nginx**. Bila mengakses backend langsung
 
 ### Terminal (fallback)
 ```bash
+# ganti 80 dengan NGINX_PORT milikmu bila berbeda
 for i in $(seq 1 15); do
-  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8080/api/v1/graphql \
+  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:80/api/v1/graphql \
     -H 'Content-Type: application/json' -d '{"query":"{ __typename }"}')
   echo -n "$code "
 done
