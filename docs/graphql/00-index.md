@@ -46,7 +46,7 @@ dan seeder (termasuk user demo) otomatis terisi saat pertama kali.
 |---|---|---|
 | GraphiQL (UI GraphQL utama) | `http://localhost:<BACKEND_PORT>/api/v1/graphql` | `:3000` |
 | Swagger REST (untuk login/set cookie) | `http://localhost:<BACKEND_PORT>/api/v1/docs` | `:3000` |
-| GraphiQL via nginx (untuk demo rate limit) | `http://localhost:<NGINX_PORT>/api/v1/graphql` | `:8080` |
+| GraphiQL via nginx (untuk demo rate limit) | `http://localhost:<NGINX_PORT>/api/v1/graphql` | sesuai `NGINX_PORT` (mis. `:80`) |
 
 Catatan: `<BACKEND_PORT>` dan `<NGINX_PORT>` diambil dari `.env.local`
 (`BACKEND_PORT`, `NGINX_PORT`). Dokumen ini memakai default di atas.
