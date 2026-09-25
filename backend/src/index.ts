@@ -2,7 +2,13 @@ import { Elysia, ValidationError } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors';
 import { betterSession } from 'elysia-better-session';
+import { yoga } from '@elysia/graphql-yoga';
+import { useAPQ } from '@graphql-yoga/plugin-apq';
 import { upsertSessionAdapter } from './utils/session-adapter';
+import { typeDefs } from './graphql/typeDefs';
+import { resolvers } from './graphql/resolvers';
+import { createContext } from './graphql/context';
+import { useSecurityLimits } from './graphql/plugins/security';
 import {
     authRoutes,
     cartRoutes,
@@ -104,6 +110,19 @@ const app = new Elysia()
                 secure: process.env.NODE_ENV === 'production',
             },
             initialData: () => ({ userId: null, email: null, role: null }),
+        })
+    )
+    .use(
+        yoga({
+            path: '/api/v1/graphql',
+            graphiql: process.env.NODE_ENV !== 'production',
+            typeDefs,
+            resolvers,
+            context: createContext,
+            plugins: [
+                useAPQ(),
+                useSecurityLimits({ maxDepth: 10, maxComplexity: 100 }),
+            ],
         })
     )
     .group('/api/v1', (api) => api

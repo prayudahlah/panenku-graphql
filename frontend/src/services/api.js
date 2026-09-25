@@ -90,14 +90,6 @@ export const products = {
   takedown: (id) => fetchApi(`/products/${id}/takedown`, { method: 'PATCH' }),
 };
 
-export const panenApi = {
-  list: (params = {}) => fetchApi(`/panen${buildQuery(params)}`),
-  create: (data) => fetchApi('/panen', { method: 'POST', body: JSON.stringify(data) }),
-  getById: (id) => fetchApi(`/panen/${id}`),
-  update: (id, data) => fetchApi(`/panen/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id) => fetchApi(`/panen/${id}`, { method: 'DELETE' }),
-};
-
 export const contracts = {
   create: (data) => fetchApi('/contracts', { method: 'POST', body: JSON.stringify(data) }),
   list: () => fetchApi('/contracts'),

@@ -1,0 +1,21 @@
+# Normalisasi line ending: simpan LF di repo, checkout LF di semua OS.
+# Ini menimpa core.autocrlf sehingga tidak ada lagi noise CRLF/LF.
+* text=auto eol=lf
+
+# File binary tidak boleh dinormalisasi
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+
+# Script Windows harus CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
