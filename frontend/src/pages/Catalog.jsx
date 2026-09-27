@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@apollo/client/react';
 import { ChevronDown } from 'lucide-react';
-import { products, references } from '../services/api';
+import { references } from '../services/api';
+import { PRODUCTS, normalizeProductList } from '../graphql/products';
 import ProductGrid from '../components/ProductGrid';
 
 function buildPageNumbers(total, current) {
@@ -24,9 +26,6 @@ const sortOptions = [
 
 export default function Catalog() {
     const [searchParams, setSearchParams] = useSearchParams();
-    const [productsData, setProductsData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [meta, setMeta] = useState({ total: 0, page: 1, limit: 12 });
     const [categories, setCategories] = useState([]);
     const [expandedParents, setExpandedParents] = useState(new Set());
 
@@ -72,26 +71,37 @@ export default function Catalog() {
         }
     }, [categoryId, categories]);
 
-    const fetchProducts = useCallback(() => {
+    const variables = useMemo(() => {
         const [sortBy, sortOrder] = sort.split('_');
-        const params = { page: String(page), limit: '12', sortBy, sortOrder };
-        if (q) params.q = q;
-        if (categoryId) params.categoryId = categoryId;
-        if (minPrice) params.minPrice = minPrice;
-        if (maxPrice) params.maxPrice = maxPrice;
-        if (isNegotiable) params.isNegotiable = isNegotiable;
-
-        setLoading(true);
-        products.list(params).then((json) => {
-            if (json.success) {
-                setProductsData(json.data);
-                setMeta(json.meta);
-            }
-            setLoading(false);
-        });
+        const parsedCategoryId = Number(categoryId);
+        const parsedMinPrice = Number(minPrice);
+        const parsedMaxPrice = Number(maxPrice);
+        return {
+            // REST `q` -> GraphQL `search`
+            search: q || undefined,
+            categoryId: categoryId && Number.isFinite(parsedCategoryId) ? parsedCategoryId : undefined,
+            minPrice: minPrice && Number.isFinite(parsedMinPrice) ? parsedMinPrice : undefined,
+            maxPrice: maxPrice && Number.isFinite(parsedMaxPrice) ? parsedMaxPrice : undefined,
+            isNegotiable:
+                isNegotiable === 'true' ? true : isNegotiable === 'false' ? false : undefined,
+            sortBy,
+            sortOrder,
+            page,
+            limit: 12,
+        };
     }, [q, categoryId, minPrice, maxPrice, isNegotiable, sort, page]);
 
-    useEffect(() => { fetchProducts(); }, [fetchProducts]);
+    const { data, loading } = useQuery(PRODUCTS, {
+        variables,
+        // Samakan perilaku REST lama yang selalu fetch; cache dipakai untuk back-nav cepat.
+        fetchPolicy: 'cache-and-network',
+        notifyOnNetworkStatusChange: true,
+    });
+
+    const productsData = normalizeProductList(data?.products?.rows);
+    const meta = data?.products
+        ? { total: data.products.total, page: data.products.page, limit: data.products.limit }
+        : { total: 0, page, limit: 12 };
 
     const navigateWithParams = useCallback((updates) => {
         const params = new URLSearchParams();

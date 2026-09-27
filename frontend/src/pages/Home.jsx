@@ -1,22 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@apollo/client/react';
 import { Search } from 'lucide-react';
 import heroBanner from '../assets/hero-banner.webp';
-import { products } from '../services/api';
+import { PRODUCTS, normalizeProductList } from '../graphql/products';
 import ProductGrid from '../components/ProductGrid';
 
 const Home = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    const [latestProducts, setLatestProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        products.list({ limit: '8', sortBy: 'createdAt', sortOrder: 'desc' }).then((json) => {
-            if (json.success) setLatestProducts(json.data);
-            setLoading(false);
-        });
-    }, []);
+    const { data, loading } = useQuery(PRODUCTS, {
+        variables: { limit: 8, page: 1, sortBy: 'createdAt', sortOrder: 'desc' },
+    });
+
+    const latestProducts = normalizeProductList(data?.products?.rows);
 
     const handleSearch = () => {
         if (searchQuery.trim()) {

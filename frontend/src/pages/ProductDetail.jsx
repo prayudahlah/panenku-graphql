@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@apollo/client/react';
 import { formatNumber, formatDecimal } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
-import { products as productsApi, cart, negotiations } from '../services/api';
+import { cart, negotiations } from '../services/api';
+import { PRODUCT, normalizeProduct, getGraphQLErrorMessage } from '../graphql/products';
 import { Handshake, Store, MapPin, Minus, Plus, Loader, Check, AlertTriangle } from 'lucide-react';
 import NegotiationModal from '../components/NegotiationModal';
 import productPlaceholder from '../assets/product_placeholder.webp';
@@ -13,9 +15,26 @@ export default function ProductDetail() {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const [product, setProduct] = useState(location.state?.product || null);
-    const [loading, setLoading] = useState(!product);
-    const [error, setError] = useState(null);
+    const initialProduct = location.state?.product || null;
+
+    // Query GraphQL selalu jalan agar data segar; hasil location.state dipakai
+    // sebagai render instan selagi query loading (perilaku sama seperti REST lama).
+    const { data, loading: queryLoading, error: queryError } = useQuery(PRODUCT, {
+        variables: { id: String(id) },
+        skip: !id,
+        fetchPolicy: 'cache-and-network',
+    });
+
+    const fetchedProduct = data?.product ? normalizeProduct(data.product) : null;
+    const product = fetchedProduct || initialProduct;
+    const loading = queryLoading && !product;
+    const error = product
+        ? null
+        : queryError
+          ? getGraphQLErrorMessage(queryError, 'Produk tidak ditemukan')
+          : queryLoading
+            ? null
+            : 'Produk tidak ditemukan';
 
     const [qty, setQty] = useState(1);
     const [actionMsg, setActionMsg] = useState(null);
@@ -24,23 +43,6 @@ export default function ProductDetail() {
 
     const [negoModal, setNegoModal] = useState(false);
     const [existingNegoId, setExistingNegoId] = useState(null);
-
-    useEffect(() => {
-        if (!id) return;
-        setLoading(true);
-        setError(null);
-        productsApi.getById(id)
-            .then((json) => {
-                if (json.success) {
-                    setProduct(json.data);
-                    setQty(Number(json.data.minOrderQty) || 1);
-                } else {
-                    setError(json.message || 'Produk tidak ditemukan');
-                }
-            })
-            .catch(() => setError('Terjadi kesalahan jaringan'))
-            .finally(() => setLoading(false));
-    }, [id]);
 
     useEffect(() => {
         if (product) {
@@ -52,11 +54,12 @@ export default function ProductDetail() {
         if (!user || !product) { setExistingNegoId(null); return; }
         negotiations.list().then((json) => {
             const list = json.success ? json.data || [] : [];
-            setExistingNegoId(list.find((n) => n.productId === product.id)?.id || null);
+            // product.id dari GraphQL berupa string (ID), samakan tipe sebelum bandingkan.
+            setExistingNegoId(list.find((n) => Number(n.productId) === Number(product.id))?.id || null);
         });
-    }, [product?.id]);
+    }, [product?.id, user]);
 
-    const isOwner = user && product && user.id === product.sellerId;
+    const isOwner = user && product && Number(user.id) === Number(product.sellerId);
     const isBuyer = user?.role === 'buyer';
     const canAct = !isOwner;
     const canNego = isBuyer && !isOwner && product?.isNegotiable;
@@ -67,7 +70,7 @@ export default function ProductDetail() {
         setAddingCart(true);
         try {
             const json = await cart.addItem({
-                productId: product.id,
+                productId: Number(product.id),
                 quantity: qty,
                 unitId: product.unitId,
             });
@@ -88,7 +91,7 @@ export default function ProductDetail() {
         setBuying(true);
         try {
             const json = await cart.addItem({
-                productId: product.id,
+                productId: Number(product.id),
                 quantity: qty,
                 unitId: product.unitId,
             });
@@ -108,7 +111,7 @@ export default function ProductDetail() {
         setActionMsg({ type: 'success', text: 'Negosiasi berhasil diajukan!' });
         negotiations.list().then((json) => {
             const list = json.success ? json.data || [] : [];
-            setExistingNegoId(list.find((n) => n.productId === product.id)?.id || null);
+            setExistingNegoId(list.find((n) => Number(n.productId) === Number(product.id))?.id || null);
         });
     };
 
