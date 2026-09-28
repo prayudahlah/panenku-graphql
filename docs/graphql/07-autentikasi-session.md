@@ -35,6 +35,10 @@ GraphQL hanya **membaca** sesi (tidak mengubahnya).
 - `backend/src/index.ts` — `betterSession({ cookie: { name: 'panenku_session', ... } })`.
 - `backend/src/controllers/auth.ts` — endpoint login/register (REST, tidak diubah).
 
+## Pemakaian di Frontend (Apollo)
+- Login dilakukan lewat app frontend / REST; cookie yang diset otomatis dipakai Apollo
+  saat memanggil GraphQL (karena `credentials: 'include'`).
+
 ## Cara membuktikan
 
 ### UI (utama)

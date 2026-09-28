@@ -49,6 +49,10 @@ estimator     : simpleEstimator (1 per field)
   sehingga Docs gagal ("Error fetching schema").
 - Karena itu alat utama demo tetap **query non-introspeksi** (mis. aliasing produk).
 
+## Pemakaian di Frontend (Apollo)
+- Query yang dijalankan frontend sederhana (kompleksitas rendah), jauh di bawah batas
+  dan aman. Demo limit tetap via GraphiQL/terminal.
+
 ## Cara membuktikan
 
 ### UI (utama)

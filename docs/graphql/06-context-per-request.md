@@ -44,6 +44,10 @@ sehingga `session` milik Elysia **tidak** sampai ke resolver. Solusinya membaca
 cookie `panenku_session` dari `request.headers` lalu mengambil data sesi lewat
 adapter yang sama (`upsertSessionAdapter.get`). Tidak ada logika sesi yang diduplikasi.
 
+## Pemakaian di Frontend (Apollo)
+- Apollo `HttpLink` memakai `credentials: 'include'` (`frontend/src/graphql/client.js`)
+  sehingga cookie `panenku_session` ikut terkirim dan context terisi per-request.
+
 ## Cara membuktikan
 
 ### UI (utama)

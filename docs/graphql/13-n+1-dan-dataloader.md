@@ -32,6 +32,10 @@ bocor antar request.
 - `backend/src/graphql/resolvers.ts` — `Product.unit` / `Product.category`
   memanggil `ctx.loaders.*.load(id)`.
 
+## Pemakaian di Frontend (Apollo)
+- Frontend tidak meminta field nested, sehingga DataLoader tidak terpicu dari app.
+- Demo batching tetap dilakukan via GraphiQL + log server (lihat bawah).
+
 ## Cara membuktikan
 
 ### UI (utama) + log server

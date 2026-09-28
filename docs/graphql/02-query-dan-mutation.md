@@ -29,6 +29,12 @@ PATCH  /products/:id/takedown <->  Mutation { takedownProduct(id:1) { ... } }
 - `backend/src/graphql/resolvers.ts` — objek `Query` dan `Mutation` berisi
   implementasi tiap field.
 
+## Pemakaian di Frontend (Apollo)
+- Query dipakai `Home.jsx`, `Catalog.jsx`, `ProductDetail.jsx` (`useQuery`).
+- Mutation dipakai `ProductList.jsx` & `pages/admin/Products.jsx` (`useMutation`).
+- Setelah mutation, frontend memanggil `refetchQueries: [{ query: PRODUCTS }]` agar
+  daftar tidak basi.
+
 ## Cara membuktikan
 
 ### UI (utama)

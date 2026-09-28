@@ -7,9 +7,14 @@ Setiap file berdiri sendiri dengan format konsisten:
 2. **Tujuan** — kenapa dipakai.
 3. **Ilustrasi (ASCII)** — gambaran sederhana.
 4. **File implementasi** — lokasi kode.
-5. **Cara membuktikan** — langkah UI dulu, lalu terminal sebagai fallback.
+5. **Cara membuktikan** — UI dulu (app frontend atau GraphiQL), lalu terminal sebagai fallback.
 
 Urutan baca disarankan dari `01` (dasar) sampai `16` (lanjut).
+
+## Status singkat
+- **Backend**: endpoint GraphQL di `/api/v1/graphql` (REST tetap hidup berdampingan).
+- **Frontend**: sudah memakai GraphQL lewat **Apollo Client** (`@apollo/client` + `InMemoryCache`). Jadi demo UI untuk aspek yang relevan bisa lewat **app frontend**, bukan hanya GraphiQL.
+- Versi `graphql`: frontend `^17`, backend `^16` (kompatibel antar-peer, tidak disamakan).
 
 ## Peta aspek
 
@@ -44,7 +49,8 @@ dan seeder (termasuk user demo) otomatis terisi saat pertama kali.
 ### 2. URL yang dipakai (sesuaikan dengan `.env.local`)
 | Keperluan | URL | Default |
 |---|---|---|
-| GraphiQL (UI GraphQL utama) | `http://localhost:<BACKEND_PORT>/api/v1/graphql` | `:3000` |
+| App frontend (UI produk via Apollo) | `http://localhost:<FRONTEND_PORT>` | `:5173` |
+| GraphiQL (UI GraphQL backend) | `http://localhost:<BACKEND_PORT>/api/v1/graphql` | `:3000` |
 | Swagger REST (untuk login/set cookie) | `http://localhost:<BACKEND_PORT>/api/v1/docs` | `:3000` |
 | GraphiQL via nginx (untuk demo rate limit) | `http://localhost:<NGINX_PORT>/api/v1/graphql` | sesuai `NGINX_PORT` (mis. `:80`) |
 
@@ -87,6 +93,8 @@ Untuk demo mutation tersebut, buat akun seller baru lewat Swagger:
    `createProduct`/`updateProduct` bisa diuji berhasil.
 
 ## Konvensi
+- Untuk aspek yang relevan, demo utama memakai **app frontend** (Apollo);
+  GraphiQL / Swagger / terminal sebagai alternatif.
 - Semua contoh query/mutation dapat ditempel langsung ke panel GraphiQL.
 - Cara "terminal (fallback)" memakai `curl` ke endpoint `/api/v1/graphql`.
 - Path kode ditulis relatif dari akar repo.

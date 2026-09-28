@@ -38,6 +38,12 @@ address/cityName/provinceName --->   String         ---> null di list, ada di de
 - Field yang hanya ada pada detail produk (`address`, `cityName`, `provinceName`)
   dibuat nullable agar tipe `Product` yang sama tetap valid untuk list.
 
+## Pemakaian di Frontend (Apollo)
+- `normalizeProduct()` (`frontend/src/graphql/products.js`) menormalkan `sellerId`,
+  `unitId`, `categoryId`, `pricePerUnit`, `minOrderQty`, `stockQuantity` dari string
+  ke number agar setara respons REST lama.
+- `id` produk **tidak** dinormalkan (tetap string) — dipakai sebagai `key`/`Link`.
+
 ## Cara membuktikan
 
 ### UI (utama)

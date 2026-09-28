@@ -38,6 +38,12 @@ mutation pakai input type:
   - `Mutation.createProduct/updateProduct` menerima `args.input` dan meneruskannya
     ke service (service melakukan normalisasi/validasi seperti REST).
 
+## Pemakaian di Frontend (Apollo)
+- Apollo mengirim argumen lewat `variables`:
+  `useQuery(PRODUCTS, { variables: { limit: 8, page: 1, sortBy, sortOrder } })` (Home),
+  dan `variables` filter lengkap (Catalog).
+- Mutation memakai input type `ProductInput` lewat variabel `$input`.
+
 ## Cara membuktikan
 
 ### UI (utama — Variables panel)

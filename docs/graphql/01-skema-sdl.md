@@ -38,6 +38,11 @@ type Product {
   `Product`, `ProductPage`, `AdminProduct`, `Unit`, `Category`, `ProductInput`.
 - `backend/src/index.ts` — schema dipasang ke server via `yoga({ typeDefs, ... })`.
 
+## Pemakaian di Frontend (Apollo)
+- `frontend/src/graphql/products.js` mendefinisikan fragment `ProductFields on Product`
+  yang field-nya selaras SDL (`id`, `name`, `pricePerUnit`, `unitName`, ...).
+- Bila SDL berubah, fragment frontend perlu diselaraskan.
+
 ## Cara membuktikan
 
 ### UI (utama)

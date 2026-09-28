@@ -40,6 +40,10 @@ Langkah 3: client kirim hash saja (lagi)
 GraphiQL tidak mendukung APQ secara native, sehingga demonstrasi penuh
 dilakukan via **terminal** (fallback). Ini pengecualian dari aturan "UI dulu".
 
+## Pemakaian di Frontend (Apollo)
+- Frontend benar-benar memakai Apollo Client, sehingga **APQ aktif otomatis**
+  (tidak perlu konfigurasi query tambahan).
+
 ## Cara membuktikan
 
 ### Terminal (fallback — disarankan untuk aspek ini)
@@ -78,7 +82,7 @@ Catatan: store APQ bersifat **in-memory per proses**. Jika backend di-restart,
 hash yang sudah terdaftar hilang, sehingga langkah 1 (`PersistedQueryNotFound`)
 akan terjadi lagi saat mencoba hash-only.
 
-### UI (bonus, bila mau)
-Apollo Client (yang akan dipakai frontend) mendukung APQ secara otomatis, jadi
-saat halaman frontend memakai Apollo, APQ aktif tanpa konfigurasi tambahan pada
-query.
+### UI (bonus)
+Apollo Client (yang **dipakai** frontend) mendukung APQ secara otomatis, jadi
+saat halaman frontend memanggil GraphQL, APQ aktif tanpa konfigurasi tambahan
+pada query.

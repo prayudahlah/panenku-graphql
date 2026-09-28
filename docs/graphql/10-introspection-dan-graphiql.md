@@ -36,6 +36,10 @@ Browser  --- GET /api/v1/graphql --->  GraphiQL (HTML+JS)
   mengecualikan tipe introspeksi (biaya 0). Tanpa pengecualian itu, query
   introspeksi (~220) akan melebihi batas 100 dan Docs gagal.
 
+## Pemakaian di Frontend (Apollo)
+- Selain GraphiQL, **Apollo DevTools** (ekstensi browser) dapat menginspeksi cache &
+  query yang dijalankan app frontend.
+
 ## Cara membuktikan
 
 ### UI (utama)

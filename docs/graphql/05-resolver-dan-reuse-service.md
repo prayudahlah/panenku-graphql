@@ -43,6 +43,10 @@ Mutation.takedownProduct-> catalogService.deleteSellerProduct({...})
 - `backend/src/services/catalog.ts` — logika produk (tidak diubah).
 - `backend/src/services/admin.ts` — `listProductsBySeller` (tidak diubah).
 
+## Pemakaian di Frontend (Apollo)
+- App frontend menampilkan data yang sama dengan REST lama karena resolver hanya
+  memanggil `catalogService.*` yang sama. Paritas inilah yang menjaga UI tak berubah.
+
 ## Cara membuktikan
 
 ### UI (utama — bandingkan GraphQL vs REST)

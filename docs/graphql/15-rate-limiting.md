@@ -36,6 +36,10 @@ Rate limit hanya berlaku lewat **nginx**. Bila mengakses backend langsung
 (`:3000`), tidak ada rate limit. Jadi demo harus melalui port nginx
 (port = `NGINX_PORT` dari `.env.local`, contoh `:80`).
 
+## Pemakaian di Frontend (Apollo)
+- Bila app frontend diakses lewat **nginx**, request GraphQL-nya ikut kena rate limit
+  (bisa `429`). Lewat Vite dev (`:5173`, proxy langsung ke backend) tidak kena.
+
 ## Cara membuktikan
 
 ### UI (utama)

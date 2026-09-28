@@ -38,6 +38,10 @@ Query.adminProducts
 - `backend/src/graphql/errors.ts` — helper `unauthenticated()` (401) & `forbidden()` (403).
 - `backend/src/services/catalog.ts` — validasi seller aktif (dipakai mutation).
 
+## Pemakaian di Frontend (Apollo)
+- Halaman admin `frontend/src/pages/admin/Products.jsx` memanggil `adminProducts`.
+- 403 dari resolver tampil sebagai pesan error di halaman (via `getGraphQLErrorMessage`).
+
 ## Cara membuktikan
 
 ### UI (utama)

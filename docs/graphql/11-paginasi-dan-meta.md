@@ -32,6 +32,11 @@ offset = (page - 1) * limit
   `rows` kosong (`"Tidak ada produk ditemukan"`).
 - `backend/src/repositories/catalog.ts` — perhitungan `offset`, `limit`, `total`.
 
+## Pemakaian di Frontend (Apollo)
+- `Catalog.jsx` mengirim `page`/`limit` dan membaca meta `total/page/limit`.
+- Cache `InMemoryCache` membedakan list per kombinasi filter/sort via `keyArgs`
+  (`Query.products`), sedangkan `page`/`limit` sengaja tidak digabung (cache per halaman).
+
 ## Cara membuktikan
 
 ### UI (utama)

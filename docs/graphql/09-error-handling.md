@@ -47,6 +47,12 @@ Bentuk error standar:
 Gaya idiomatik GraphQL adalah **throw** error, bukan mengembalikan union
 `{ error } | { data }`. Karena itu resolver melempar `GraphQLError`.
 
+## Pemakaian di Frontend (Apollo)
+- `getGraphQLErrorMessage()` (`frontend/src/graphql/products.js`) membaca
+  `error.graphQLErrors[0].message` (dan error jaringan) untuk ditampilkan ke user.
+- `extensions.code` (mis. `ERR-PROD-03`) tersedia di respons, namun helper frontend
+  saat ini **belum** memakainya — yang dipakai adalah `message`.
+
 ## Cara membuktikan
 
 ### UI (utama)

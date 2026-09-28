@@ -38,6 +38,12 @@ type Category { id: Int!  name: String! }
 - `backend/src/graphql/resolvers.ts` — resolver `Product.unit` & `Product.category`.
 - `backend/src/graphql/loaders.ts` — pengambilan batch (lihat `13`).
 
+## Pemakaian di Frontend (Apollo)
+- Frontend memakai field **flat** (`unitName`, `categoryName`) — bukan nested
+  `unit { name }` — demi paritas bentuk dengan REST lama.
+- Karena itu nested `Product.unit`/`category` adalah showcase **backend-only**
+  (didemokan via GraphiQL).
+
 ## Cara membuktikan
 
 ### UI (utama)
