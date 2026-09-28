@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { ArrowLeft, CheckCircle, Edit3, ImagePlus, Package, Plus, Trash2, Upload, XCircle } from 'lucide-react';
-import { products, references, seller } from '../services/api';
+import { references, seller } from '../services/api';
+import {
+    CREATE_PRODUCT,
+    PRODUCT,
+    PRODUCTS,
+    TAKEDOWN_PRODUCT,
+    UPDATE_PRODUCT,
+    getGraphQLErrorMessage,
+    normalizeProduct,
+} from '../graphql/products';
 import { formatNumber } from '../utils/format';
 
 const PAGE_LIMIT = 10;
@@ -118,10 +128,29 @@ export default function ProductList() {
     const navigate = useNavigate();
     const location = useLocation();
     const { id: productId } = useParams();
+    const apolloClient = useApolloClient();
 
     const isCreateMode = location.pathname.endsWith('/create');
     const isEditMode = Boolean(productId);
     const isFormMode = isCreateMode || isEditMode;
+
+    // `network-only` (bukan `cache-and-network`) supaya form hanya diisi satu kali
+    // dari respons terbaru. Kalau cache ikut dipakai, respons kedua bisa menimpa
+    // input yang mulai diketik pengguna. Perilaku ini sama dengan REST lama yang
+    // selalu fetch `products.getById`.
+    const {
+        data: detailData,
+        loading: detailLoading,
+        error: detailError,
+    } = useQuery(PRODUCT, {
+        variables: { id: String(productId ?? '') },
+        skip: !isEditMode,
+        fetchPolicy: 'network-only',
+    });
+
+    const [createProduct, { loading: creating }] = useMutation(CREATE_PRODUCT);
+    const [updateProduct, { loading: updating }] = useMutation(UPDATE_PRODUCT);
+    const [takedownProduct, { loading: takingDown }] = useMutation(TAKEDOWN_PRODUCT);
 
     const [data, setData] = useState([]);
     const [summary, setSummary] = useState({ tersedia: 0, menipis: 0, habis: 0 });
@@ -139,9 +168,14 @@ export default function ProductList() {
     const [apiError, setApiError] = useState('');
     const [errors, setErrors] = useState({});
 
+    const busy = saving || creating || updating || takingDown;
+
     const categoryGroups = useMemo(() => buildCategoryGroups(categories), [categories]);
 
     const loadCatalog = async () => {
+        // Daftar katalog seller tetap REST (`/sellers/catalog`): bentuk datanya
+        // memakai productName/category/unit + status + summary, tidak ada padanannya
+        // di SDL. Yang dimigrasikan ke GraphQL hanya getById + create/update/takedown.
         setLoading(true);
         setApiError('');
 
@@ -181,36 +215,14 @@ export default function ProductList() {
         }
     };
 
-    const loadProductDetail = async (id) => {
-        setLoading(true);
-        setApiError('');
-        setErrors({});
-
-        try {
-            const json = await products.getById(id);
-
-            if (!json.success) {
-                setApiError(json.message || 'Gagal mengambil detail produk');
-                return;
-            }
-
-            const detail = json.data || {};
-            setSelected(detail);
-            setForm({
-                name: detail.name || detail.productName || '',
-                categoryId: detail.categoryId || detail.category_id || '',
-                description: detail.description || '',
-                unitId: detail.unitId || detail.unit_id || '',
-                minOrderQty: detail.minOrderQty || detail.min_order_qty || '1',
-                pricePerUnit: detail.pricePerUnit || detail.price_per_unit || '',
-                stockQuantity: detail.stockQuantity || detail.stock_quantity || '',
-                isNegotiable: Boolean(detail.isNegotiable ?? detail.is_negotiable),
-            });
-        } catch (error) {
-            setApiError('Layanan tidak tersedia. Silakan coba lagi.');
-        } finally {
-            setLoading(false);
-        }
+    // Produk yang di-takedown menjadi soft-deleted, jadi entitas Product-nya harus
+    // dibuang dari cache; kalau tidak, `product(id)` yang di-refetch akan 404
+    // (ERR-CAT-01) dari cache lama.
+    const evictProduct = (id) => {
+        const cacheId = apolloClient.cache.identify({ __typename: 'Product', id: String(id) });
+        if (!cacheId) return;
+        apolloClient.cache.evict({ id: cacheId });
+        apolloClient.cache.gc();
     };
 
     useEffect(() => {
@@ -224,18 +236,38 @@ export default function ProductList() {
     }, [isFormMode, page]);
 
     useEffect(() => {
+        const detail = detailData?.product;
+        if (!detail) return;
+
+        const normalized = normalizeProduct(detail);
+        setSelected(normalized);
+        setErrors({});
+        setForm({
+            name: normalized.name || '',
+            categoryId: normalized.categoryId || '',
+            description: normalized.description || '',
+            unitId: normalized.unitId || '',
+            minOrderQty: normalized.minOrderQty || '1',
+            pricePerUnit: normalized.pricePerUnit || '',
+            stockQuantity: normalized.stockQuantity || '',
+            isNegotiable: Boolean(normalized.isNegotiable),
+        });
+    }, [detailData]);
+
+    useEffect(() => {
+        if (isEditMode && detailError) {
+            setApiError(getGraphQLErrorMessage(detailError, 'Gagal mengambil detail produk'));
+        }
+    }, [detailError, isEditMode]);
+
+    useEffect(() => {
         if (isCreateMode) {
             setForm(emptyForm);
             setSelected(null);
             setErrors({});
             setApiError('');
-            setLoading(false);
         }
-
-        if (isEditMode) {
-            loadProductDetail(productId);
-        }
-    }, [isCreateMode, isEditMode, productId]);
+    }, [isCreateMode]);
 
     const updateForm = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -302,7 +334,7 @@ export default function ProductList() {
         e.preventDefault();
         if (!validate()) return;
 
-        const originalStock = selected?.stockQuantity ?? selected?.stock_quantity;
+        const originalStock = selected?.stockQuantity;
         const newStock = Number(form.stockQuantity);
         if (isEditMode && originalStock !== undefined && originalStock !== null && newStock < Number(originalStock)) {
             if (!window.confirm('Anda akan mengurangi stok. Pastikan tidak ada pesanan aktif yang terpengaruh. Lanjutkan?')) {
@@ -314,18 +346,26 @@ export default function ProductList() {
         setApiError('');
 
         try {
-            const json = isEditMode
-                ? await products.update(productId, getPayload())
-                : await products.create(getPayload());
-
-            if (json.success) {
-                backToList();
-                setPage(1);
+            // `refetchQueries` menyegarkan query PRODUCTS yang masih aktif
+            // (Home / Catalog) supaya tidak menampilkan harga/stok lama.
+            if (isEditMode) {
+                await updateProduct({
+                    variables: { id: String(productId), input: getPayload() },
+                    refetchQueries: [{ query: PRODUCTS }],
+                });
             } else {
-                setApiError(json.message || 'Produk gagal disimpan');
+                await createProduct({
+                    variables: { input: getPayload() },
+                    refetchQueries: [{ query: PRODUCTS }],
+                });
             }
+
+            backToList();
+            setPage(1);
         } catch (error) {
-            setApiError('Layanan tidak tersedia. Silakan coba lagi.');
+            // Pesan diambil dari GraphQLError.message, isinya sama dengan
+            // `message` REST (mis. "Nama produk minimal 3 karakter" / ERR-PROD-03).
+            setApiError(getGraphQLErrorMessage(error, 'Layanan tidak tersedia. Silakan coba lagi.'));
         } finally {
             setSaving(false);
         }
@@ -338,17 +378,15 @@ export default function ProductList() {
         setApiError('');
 
         try {
-            const json = await products.takedown(deleteTarget.id);
-
-            if (json.success) {
-                setDeleteTarget(null);
-                loadCatalog();
-            } else {
-                setApiError(json.message || 'Produk gagal dihapus');
-                setDeleteTarget(null);
-            }
+            await takedownProduct({
+                variables: { id: String(deleteTarget.id) },
+                refetchQueries: [{ query: PRODUCTS }],
+            });
+            evictProduct(deleteTarget.id);
+            setDeleteTarget(null);
+            loadCatalog();
         } catch (error) {
-            setApiError('Layanan tidak tersedia. Silakan coba lagi.');
+            setApiError(getGraphQLErrorMessage(error, 'Layanan tidak tersedia. Silakan coba lagi.'));
             setDeleteTarget(null);
         } finally {
             setSaving(false);
@@ -374,7 +412,7 @@ export default function ProductList() {
 
                 {apiError && <div className="mb-5 p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-100">{apiError}</div>}
 
-                {loading && isEditMode ? (
+                {detailLoading && isEditMode ? (
                     <div className="bg-white rounded-xl border p-8 text-gray-400">Memuat detail produk...</div>
                 ) : (
                     <form onSubmit={handleSubmit} className="grid lg:grid-cols-[1fr_320px] gap-6">
@@ -526,8 +564,8 @@ export default function ProductList() {
                             <button type="button" onClick={backToList} className="px-6 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg">
                                 Batal
                             </button>
-                            <button disabled={saving} type="submit" className="px-8 py-2.5 bg-primary-green text-white text-sm font-bold rounded-lg hover:bg-primary-green-800 disabled:opacity-60">
-                                {saving ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Publish to Marketplace'}
+                            <button disabled={busy} type="submit" className="px-8 py-2.5 bg-primary-green text-white text-sm font-bold rounded-lg hover:bg-primary-green-800 disabled:opacity-60">
+                                {busy ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Publish to Marketplace'}
                             </button>
                         </div>
                     </form>
@@ -644,8 +682,8 @@ export default function ProductList() {
                                 </div>
                             </div>
 
-                            <button disabled={saving} onClick={handleDelete} className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 disabled:opacity-60">
-                                {saving ? 'Menghapus...' : 'Hapus Produk'}
+                            <button disabled={busy} onClick={handleDelete} className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 disabled:opacity-60">
+                                {busy ? 'Menghapus...' : 'Hapus Produk'}
                             </button>
                             <button onClick={() => setDeleteTarget(null)} className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-bold mt-3 hover:bg-gray-200">
                                 Batal
