@@ -68,6 +68,62 @@ export const PRODUCT = gql`
     ${PRODUCT_FIELDS}
 `;
 
+// Mutasi SENGAJA tidak memakai `...ProductFields`. Resolver mengembalikan baris
+// DB mentah hasil `.returning()`, jadi unitName/categoryName/farmName/address/
+// cityName/provinceName bernilai null (nullable di SDL, jadi GraphQL tidak protes).
+// Kalau field itu ikut diminta, Apollo akan menimpa entitas Product yang sudah
+// ternormalisasi di cache dengan nilai null tersebut. Kesegaran data dijamin lewat
+// refetch, jadi field minimal di bawah sudah cukup.
+export const CREATE_PRODUCT = gql`
+    mutation CreateProduct($input: ProductInput!) {
+        createProduct(input: $input) {
+            id
+            name
+            stockQuantity
+        }
+    }
+`;
+
+export const UPDATE_PRODUCT = gql`
+    mutation UpdateProduct($id: ID!, $input: ProductInput!) {
+        updateProduct(id: $id, input: $input) {
+            id
+            name
+            stockQuantity
+        }
+    }
+`;
+
+export const TAKEDOWN_PRODUCT = gql`
+    mutation TakedownProduct($id: ID!) {
+        takedownProduct(id: $id) {
+            id
+        }
+    }
+`;
+
+// adminProducts memakai type terpisah (AdminProduct) yang tidak punya
+// unitName/categoryName/farmName — sesuai hasil adminService.listProductsBySeller.
+export const ADMIN_PRODUCT_FIELDS = gql`
+    fragment AdminProductFields on AdminProduct {
+        id
+        name
+        pricePerUnit
+        stockQuantity
+        status
+        createdAt
+    }
+`;
+
+export const ADMIN_PRODUCTS = gql`
+    query AdminProducts($sellerId: ID!) {
+        adminProducts(sellerId: $sellerId) {
+            ...AdminProductFields
+        }
+    }
+    ${ADMIN_PRODUCT_FIELDS}
+`;
+
 // Normalisasi tipe: GraphQL mengembalikan ID sebagai string dan
 // angka (Float) kadang string — samakan dengan bentuk REST lama
 // agar perbandingan `user.id === product.sellerId` dan Link tetap jalan.

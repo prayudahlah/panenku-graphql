@@ -1,36 +1,68 @@
 import { useState, useEffect } from 'react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { formatNumber } from '../../utils/format';
 import { admin } from '../../services/api';
+import { ADMIN_PRODUCTS, TAKEDOWN_PRODUCT, getGraphQLErrorMessage } from '../../graphql/products';
 
 export default function Products() {
+    const apolloClient = useApolloClient();
+
     const [sellers, setSellers] = useState([]);
     const [selectedSeller, setSelectedSeller] = useState(null);
-    const [products, setProducts] = useState([]);
     const [search, setSearch] = useState('');
+    const [actionError, setActionError] = useState('');
 
+    // Daftar penjual tetap REST (`/sellers`): tidak termasuk scope migrasi GraphQL.
     const fetchSellers = () => {
         admin.listSellers().then((json) => {
             if (json.success) setSellers(json.data);
         });
     };
 
-    const fetchProducts = (sellerId) => {
-        admin.listProducts(sellerId).then((json) => {
-            if (json.success) setProducts(json.data);
-        });
-    };
+    const { data, loading, error, refetch } = useQuery(ADMIN_PRODUCTS, {
+        variables: { sellerId: String(selectedSeller?.id ?? '') },
+        skip: !selectedSeller,
+        fetchPolicy: 'network-only',
+    });
 
-    useEffect(() => { fetchSellers(); }, []);
+    const [takedownProduct, { loading: takingDown }] = useMutation(TAKEDOWN_PRODUCT);
+
+    const products = data?.adminProducts || [];
+
+    useEffect(() => {
+        fetchSellers();
+    }, []);
 
     const selectSeller = (seller) => {
+        setActionError('');
         setSelectedSeller(seller);
-        fetchProducts(seller.id);
+    };
+
+    // Produk yang di-takedown menjadi soft-deleted, jadi entitas Product-nya dibuang
+    // dari cache supaya tidak ada salinan basi tersisa.
+    const evictProduct = (id) => {
+        const cacheId = apolloClient.cache.identify({ __typename: 'Product', id: String(id) });
+        if (!cacheId) return;
+        apolloClient.cache.evict({ id: cacheId });
+        apolloClient.cache.gc();
     };
 
     const handleTakedown = async (productId) => {
-        const json = await admin.takedownProduct(productId);
-        if (json.success && selectedSeller) fetchProducts(selectedSeller.id);
+        setActionError('');
+
+        try {
+            await takedownProduct({ variables: { id: String(productId) } });
+            evictProduct(productId);
+            refetch();
+        } catch (err) {
+            setActionError(getGraphQLErrorMessage(err, 'Gagal mengubah status produk'));
+        }
     };
+
+    // Error query ditampilkan apa adanya: `adminProducts` hanya menerima role
+    // 'admin' (super_admin ditolak), jadi 403 "Akses ditolak" ikut terlihat di sini.
+    const errorMessage =
+        actionError || (error ? getGraphQLErrorMessage(error, 'Gagal memuat produk') : '');
 
     const filtered = sellers.filter(
         (s) =>
@@ -67,12 +99,17 @@ export default function Products() {
             ) : (
                 <>
                     <button
-                        onClick={() => { setSelectedSeller(null); setProducts([]); }}
+                        onClick={() => { setSelectedSeller(null); setActionError(''); }}
                         className="text-sm text-primary-green font-medium mb-4 hover:underline"
                     >
                         ← Kembali ke daftar penjual
                     </button>
                     <h2 className="text-lg font-semibold mb-4">Produk milik: {selectedSeller.farmName}</h2>
+
+                    {errorMessage && (
+                        <p className="mb-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-100">{errorMessage}</p>
+                    )}
+
                     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50 text-left">
@@ -86,7 +123,11 @@ export default function Products() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
-                                {products.map((p) => (
+                                {loading && products.length === 0 ? (
+                                    <tr><td colSpan="6" className="text-center text-gray-400 py-12">Memuat...</td></tr>
+                                ) : products.length === 0 ? (
+                                    <tr><td colSpan="6" className="text-center text-gray-400 py-12">Belum ada produk.</td></tr>
+                                ) : products.map((p) => (
                                     <tr key={p.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3">{p.id}</td>
                                         <td className="px-4 py-3 font-medium">{p.name}</td>
@@ -100,10 +141,11 @@ export default function Products() {
                                         <td className="px-4 py-3">
                                             {p.status === 'active' && (
                                                 <button
+                                                    disabled={takingDown}
                                                     onClick={() => handleTakedown(p.id)}
-                                                    className="text-xs px-3 py-1 rounded font-medium bg-red-50 text-red-600 hover:bg-red-100 transition"
+                                                    className="text-xs px-3 py-1 rounded font-medium bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
                                                 >
-                                                    Takedown
+                                                    {takingDown ? 'Memproses...' : 'Takedown'}
                                                 </button>
                                             )}
                                         </td>
