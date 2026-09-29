@@ -10,7 +10,7 @@ export type SecurityLimitsOptions = {
 
 const baseEstimator = simpleEstimator({ defaultComplexity: 1 });
 
-const estimator: ComplexityEstimator = (options) => {
+export const estimator: ComplexityEstimator = (options) => {
     const parentName = (options.type as { name?: string })?.name ?? '';
     const fieldTypeName = getNamedType(options.field.type).name;
 

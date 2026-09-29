@@ -9,6 +9,7 @@ import { typeDefs } from './graphql/typeDefs';
 import { resolvers } from './graphql/resolvers';
 import { createContext } from './graphql/context';
 import { useSecurityLimits } from './graphql/plugins/security';
+import { useCostRateLimit } from './graphql/plugins/cost-rate-limit';
 import {
     authRoutes,
     cartRoutes,
@@ -131,6 +132,7 @@ const app = new Elysia()
             plugins: [
                 useAPQ(),
                 useSecurityLimits({ maxDepth: 10, maxComplexity: 100 }),
+                useCostRateLimit({ limit: 300, windowMs: 60000 }),
             ],
         })
     )
